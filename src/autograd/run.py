@@ -1,8 +1,15 @@
+from pathlib import Path
+
 import numpy as np
 
+from autograd.data import Dataloader
+from autograd.datasets.mnist import MNIST
+from autograd.metric import Accuracy
 from autograd.model import FCNModel
+from autograd.optim import SGD
 from autograd.tensor import Tensor
 from autograd.layer import Linear
+from autograd.trainer import Trainer
 
 
 def fcn_example():
@@ -22,16 +29,17 @@ def fcn_example():
     sm = Tensor.softmax(y2, axis=-1)
     loss = Tensor.cross_entropy(sm, label)
     loss.backward()
-    print(loss.data)
+    print(W1.grad)
 
 
 if __name__ == "__main__":
-    x = Tensor(np.array([[0.4183, 0.5209, 0.0291]]), requires_grad=False)
-    label = Tensor(np.array([[0.7095, 0.0942]]), requires_grad=False)
+
+    dataset = MNIST(Path("../../data/mnist_train.csv"))
+    model_path = Path("../../data/model")
+    dataloader = Dataloader(dataset, 8, True)
     model = FCNModel()
-    y = model.forward(x)
-    loss = Tensor.cross_entropy(y, label)
-    loss.backward()
-    print(loss.data)
-    for param in model.parameters():
-        print(param)
+    optimizer = SGD(lr=0.01)
+    trainer = Trainer(model, optimizer, 5)
+    trainer.fit(dataloader, [Accuracy()])
+    model.save(model_path)
+

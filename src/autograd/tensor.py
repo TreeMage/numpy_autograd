@@ -3,6 +3,8 @@ from typing import Optional, List, Tuple
 
 import numpy as np
 
+EPSILON = 1e-8
+
 
 class Tensor:
     def __init__(self, data: np.ndarray, requires_grad=True, grad_fn: 'Function' = None):
@@ -25,7 +27,7 @@ class Tensor:
 
     @classmethod
     def rand(cls, shape, requires_grad=True):
-        return Tensor(np.random.rand(*shape), requires_grad=requires_grad)
+        return Tensor(np.random.rand(*shape) - 0.5, requires_grad=requires_grad)
 
     @classmethod
     def zeros(cls, shape, requires_grad=True):
@@ -243,11 +245,11 @@ class Pow(Function):
 class Log(Function):
     def forward(self, x: Tensor) -> Tensor:
         self.save_tensors_for_backward(x)
-        return Tensor(np.log(x.data), grad_fn=self)
+        return Tensor(np.log(x.data + EPSILON), grad_fn=self)
 
     def backward(self, grad_in: np.ndarray) -> List[np.ndarray]:
         x, = self.stored_tensors
-        return [grad_in / x.data]
+        return [grad_in / (x.data + EPSILON)]
 
 
 class Matmul(Function):
