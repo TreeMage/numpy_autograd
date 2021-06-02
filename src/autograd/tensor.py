@@ -62,6 +62,10 @@ class Tensor:
         return Pow.apply(this, exponent)
 
     @classmethod
+    def dot(cls, this, that):
+        return Tensor.sum(this * that, axis=-1)
+
+    @classmethod
     def sigmoid(cls, this):
         return Sigmoid.apply(this)
 
@@ -370,11 +374,3 @@ class ReLU(Function):
     def backward(self, grad_in: np.ndarray) -> List[np.ndarray]:
         x, = self.stored_tensors
         return [grad_in * (x.data >= 0)]
-
-
-
-
-
-
-
-

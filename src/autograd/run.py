@@ -33,7 +33,6 @@ def fcn_example():
 
 
 if __name__ == "__main__":
-
     dataset = MNIST(Path("../../data/mnist_train.csv"))
     model_path = Path("../../data/model")
     dataloader = Dataloader(dataset, 8, True)
