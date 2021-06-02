@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 
 import tqdm
 
@@ -24,13 +24,15 @@ class RunningAverage:
 
 class Trainer:
 
+    MOVING_AVG_WINDOW_SIZE = 100
+
     def __init__(self, model: Model, optimizer: Optimizer, num_epochs: int):
         self.model = model
         self.optimizer = optimizer
         self.num_epochs = num_epochs
 
     def fit(self, train_dataloader: Dataloader, metrics: List[Metric] = None):
-        avg = RunningAverage(1000)
+        avg = RunningAverage(self.MOVING_AVG_WINDOW_SIZE)
         self.optimizer.bind(self.model.parameters())
         for epoch in range(self.num_epochs):
             [metric.reset() for metric in metrics]
@@ -50,3 +52,23 @@ class Trainer:
                 pbar.set_description(desc + metric_desc)
                 loss.backward()
                 self.optimizer.step()
+
+    def test(self, test_dataloader: Dataloader, metrics: List[Metric] = None) -> Dict[str, float]:
+        avg = RunningAverage(self.MOVING_AVG_WINDOW_SIZE)
+        [metric.reset() for metric in metrics]
+        pbar = tqdm.trange(len(test_dataloader))
+        for batch_idx in pbar:
+            x, labels = test_dataloader[batch_idx]
+            y = self.model(x)
+            loss = self.model.compute_loss(y, labels)
+
+            [metric.forward(y, labels) for metric in metrics]
+
+            avg.append(loss.data.item())
+            desc = f"[Testing] Loss: {avg.compute():.3f} "
+            metric_desc = ' '.join([f"{metric.name()}: {metric.compute():.3f}" for metric in metrics])
+            pbar.set_description(desc + metric_desc)
+
+        return {metric.name(): metric.compute() for metric in metrics}
+
+

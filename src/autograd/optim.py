@@ -31,4 +31,5 @@ class SGD(Optimizer):
 
     def step(self):
         for param in self.parameters:
-            param.data -= self.lr * (np.mean(param.grad, axis=0) + self.weight_decay * param.data)
+            # Sum gradients per batch
+            param.data -= self.lr * (np.sum(param.grad, axis=0) + self.weight_decay * param.data)

@@ -1,3 +1,5 @@
+import argparse
+import json
 from pathlib import Path
 
 import numpy as np
@@ -33,12 +35,33 @@ def fcn_example():
 
 
 if __name__ == "__main__":
-    dataset = MNIST(Path("../../data/mnist_train.csv"))
-    model_path = Path("../../data/model")
-    dataloader = Dataloader(dataset, 8, True)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--train-dataset", type=Path, dest="train_dataset", required=True)
+    parser.add_argument("--test-dataset", type=Path, dest="test_dataset", required=True)
+    parser.add_argument("--output-dir", type=Path, dest="output_dir", required=True)
+    parser.add_argument("--lr", type=float, dest="lr", default=4e-3)
+    parser.add_argument("--weight-decay", type=float, dest="weight_decay", default=0.)
+    parser.add_argument("--batch-size", type=int, default=8, dest="batch_size")
+    parser.add_argument("--shuffle", type=bool, default=True, dest="shuffle")
+    parser.add_argument("--epochs", type=int, dest="epochs", default=100)
+
+    args = parser.parse_args()
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    train_dataset = MNIST(args.train_dataset)
+    train_dataloader = Dataloader(train_dataset, args.batch_size, args.shuffle)
+
+    test_dataset = MNIST(args.test_dataset)
+    test_dataloader = Dataloader(test_dataset, args.batch_size, False)
+
     model = FCNModel()
-    optimizer = SGD(lr=0.01)
-    trainer = Trainer(model, optimizer, 5)
-    trainer.fit(dataloader, [Accuracy()])
-    model.save(model_path)
+
+    optimizer = SGD(lr=args.lr, weight_decay=args.weight_decay)
+    trainer = Trainer(model, optimizer, args.epochs)
+    trainer.fit(train_dataloader, [Accuracy()])
+    test_results = trainer.test(test_dataloader, [Accuracy()])
+    with open(args.output_dir / "results.json", "w") as f:
+        json.dump(test_results, f)
+
+    model.save(args.output_dir / "model")
 
