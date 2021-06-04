@@ -113,6 +113,10 @@ class Tensor:
     def max(cls, this, axis: int = None):
         return Max.apply(this, axis)
 
+    @classmethod
+    def conv2d(cls, inp, kernel):
+        return Conv2D.apply(inp, kernel)
+
     def __neg__(self):
         return Tensor.neg(self)
 
@@ -374,3 +378,40 @@ class ReLU(Function):
     def backward(self, grad_in: np.ndarray) -> List[np.ndarray]:
         x, = self.stored_tensors
         return [grad_in * (x.data >= 0)]
+
+
+def conv2d(self, inp: np.ndarray, kernel: np.ndarray) -> np.ndarray:
+    b, iH, iW, iC = inp.shape
+    nf, fH, fW, fC = kernel.shape
+    h = iH - fH + 1
+    w = iW - fW + 1
+    res = np.zeros((inp.shape[0], h, w, nf))
+    assert iC == fC, f"Input channels and kernel channels have to match. ({iC} != {fC})"
+    for y in range(h):
+        for x in range(w):
+            sub_img = inp[:, y:y + fH, x:x + fW, :]
+            for k in range(nf):
+                filter = np.repeat(np.expand_dims(kernel[k], axis=0), axis=0, repeats=b)
+                res[:, y, x, k] = np.apply_over_axes(np.sum, filter * sub_img, axes=[1, 2, 3])
+
+    return res
+
+
+class Conv2D(Function):
+    def forward(self, inp: Tensor, kernel: Tensor) -> Tensor:
+        self.save_tensors_for_backward(inp, kernel)
+        return Tensor(conv2d(inp.data, kernel.data), grad_fn=self)
+
+    def backward(self, grad_in: np.ndarray) -> List[np.ndarray]:
+        return []
+    
+
+if __name__ == "__main__":
+
+   inp = Tensor(np.array([0.1, -0.2, 0.5, 0.6, 1.2, 1.4, 1.6, 2.2, 0.01, 0.2, -0.3, 4.0, 0.9, 0.3, 0.5, 0.65, 1.1, 0.7, 2.2, 4.4, 3.2, 1.7, 6.3, 8.2]).reshape((1,4,3,2)))
+   kernel = Tensor(np.array([0.1, -0.2, 0.3, 0.4, 0.7, 0.6, 0.9, -1.1, 0.37, -0.9, 0.32, 0.17, 0.9, 0.3, 0.2, -0.7]).reshape((2,2,2,2)))
+   print(np.sum(inp.data[0, 0:2, 0:2, :] * kernel.data[0, :,:,:]))
+   #inp = Tensor(np.arange(9).reshape((1, 3, 3, 1)))
+   #kernel = Tensor(np.array([[1,0],[0,0]]).reshape((1,2,2,1)))
+   res = Tensor.conv2d(inp, kernel)
+   print(res.data[0,1:3,0:3,0])

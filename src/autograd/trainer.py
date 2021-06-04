@@ -54,7 +54,7 @@ class Trainer:
                 self.optimizer.step()
 
     def test(self, test_dataloader: Dataloader, metrics: List[Metric] = None) -> Dict[str, float]:
-        avg = RunningAverage(self.MOVING_AVG_WINDOW_SIZE)
+        avg = RunningAverage(len(test_dataloader))
         [metric.reset() for metric in metrics]
         pbar = tqdm.trange(len(test_dataloader))
         for batch_idx in pbar:
@@ -69,6 +69,8 @@ class Trainer:
             metric_desc = ' '.join([f"{metric.name()}: {metric.compute():.3f}" for metric in metrics])
             pbar.set_description(desc + metric_desc)
 
-        return {metric.name(): metric.compute() for metric in metrics}
+        return_dict = {metric.name(): metric.compute() for metric in metrics}
+        return_dict["Test Loss"] = avg.compute()
+        return return_dict
 
 
