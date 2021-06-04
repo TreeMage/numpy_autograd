@@ -380,7 +380,7 @@ class ReLU(Function):
         return [grad_in * (x.data >= 0)]
 
 
-def conv2d(self, inp: np.ndarray, kernel: np.ndarray) -> np.ndarray:
+def conv2d(inp: np.ndarray, kernel: np.ndarray) -> np.ndarray:
     b, iH, iW, iC = inp.shape
     nf, fH, fW, fC = kernel.shape
     h = iH - fH + 1
@@ -403,7 +403,21 @@ class Conv2D(Function):
         return Tensor(conv2d(inp.data, kernel.data), grad_fn=self)
 
     def backward(self, grad_in: np.ndarray) -> List[np.ndarray]:
-        return []
+        inp, kernel = self.stored_tensors
+        kH, kW = kernel.shape[1], kernel.shape[2]
+        # Gradient with respect to the input
+        bk = np.rot90(np.transpose(kernel.data, axes=(0, 1, 3, 2)), k=2, axes=(1, 2))
+        padded = np.pad(grad_in, ((0,0),(kH - 1, kH - 1),(kW - 1, kW - 1), (0, 0)))
+        inp_grad = conv2d(padded, bk)
+        # Gradient with respect to the weights
+        kernel_grad = np.zeros_like(kernel.data)
+        for co in range(kernel.shape[0]):
+            sd = grad_in[:, :, co]
+            for ci in range(kernel.shape[3]):
+                si = inp.data[:, :, :, ci]
+                kernel_grad[co, :, :, ci] += conv2d(si, sd)
+
+        return [conv2d(inp_grad, pk), kernel_grad]
     
 
 if __name__ == "__main__":
@@ -414,4 +428,5 @@ if __name__ == "__main__":
    #inp = Tensor(np.arange(9).reshape((1, 3, 3, 1)))
    #kernel = Tensor(np.array([[1,0],[0,0]]).reshape((1,2,2,1)))
    res = Tensor.conv2d(inp, kernel)
-   print(res.data[0,1:3,0:3,0])
+   l = Tensor.sum(res)
+   l.backward()
