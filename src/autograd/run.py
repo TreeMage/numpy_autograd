@@ -7,7 +7,7 @@ import numpy as np
 from autograd.data import Dataloader
 from autograd.datasets.mnist import MNIST
 from autograd.metric import Accuracy
-from autograd.model import FCNModel
+from autograd.model import FCNModel, CNNModel
 from autograd.optim import SGD
 from autograd.tensor import Tensor
 from autograd.layer import Linear
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     test_dataset = MNIST(args.test_dataset)
     test_dataloader = Dataloader(test_dataset, args.batch_size, False)
 
-    model = FCNModel()
+    model = CNNModel()
 
     optimizer = SGD(lr=args.lr, weight_decay=args.weight_decay)
     trainer = Trainer(model, optimizer, args.epochs)

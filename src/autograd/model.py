@@ -7,7 +7,7 @@ import attr
 import numpy
 import numpy as np
 
-from autograd.layer import Linear, ReLU, Softmax, Sigmoid, Layer
+from autograd.layer import Linear, ReLU, Softmax, Sigmoid, Layer, Conv2D
 from autograd.tensor import Tensor
 
 
@@ -57,6 +57,28 @@ class FCNModel(Model):
         r1 = self.sig(y1)
         y2 = self.lin2(r1)
         sm = self.softmax(y2)
+        return sm
+
+    def compute_loss(self, y: Tensor, target: Tensor) -> Tensor:
+        return Tensor.cross_entropy(y, target)
+
+
+class CNNModel(Model):
+    def __init__(self):
+        self.conv1 = Conv2D(input_shape=(28,28,1), kernel_shape=(3,3), num_filters=10)
+        self.conv2 = Conv2D(input_shape=(26,26,10), kernel_shape=(3,3), num_filters=10)
+        self.relu = ReLU()
+        self.lin = Linear(shape=(24*24*10, 10))
+        self.sm = Softmax()
+
+    def forward(self, x: Tensor) -> Tensor:
+        batch_size = x.shape[0]
+        c1 = self.conv1(x)
+        r1 = self.relu(c1)
+        c2 = self.conv2(r1)
+        r2 = self.relu(c2)
+        y = self.lin(Tensor.reshape(r2, (batch_size, 1, -1)))
+        sm = self.sm(y)
         return sm
 
     def compute_loss(self, y: Tensor, target: Tensor) -> Tensor:

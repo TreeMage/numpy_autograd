@@ -18,7 +18,7 @@ class MNIST(Dataset):
             for line in reader:
                 label = np.zeros((1,10))
                 label[0, int(line[0])] = 1
-                d = np.reshape(np.array([float(x) / 255 for x in line[1:]]), (1,28,28))
+                d = np.reshape(np.array([float(x) / 255 for x in line[1:]]), (28,28,1))
                 data.append(d)
                 labels.append(label)
 
