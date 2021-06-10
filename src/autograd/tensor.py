@@ -383,14 +383,17 @@ class ReLU(Function):
 def im2col(x: np.ndarray, kernel_shape: Tuple[int, ...], stride=1):
     _, fH, fW, fC = kernel_shape
     bs, H, W, C = x.shape
+    sBs, sH, sW, sC = x.strides
     oH = (H - fH) // stride + 1
     oW = (W - fW) // stride + 1
-    col = np.zeros((bs, oH*oW, fH*fW * C))
-    for i in range(oH):
-        for j in range(oW):
-            cube = x[:, i*stride:i*stride+fH,j*stride:j*stride+fW, :]
-            col[:, i * oH + j, :] = cube.reshape(bs, -1)
-    return col
+    #col = np.zeros((bs, oH*oW, fH*fW * C))
+    #for i in range(oH):
+    #    for j in range(oW):
+    #        cube = x[:, i*stride:i*stride+fH,j*stride:j*stride+fW, :]
+    #        col[:, i * oH + j, :] = cube.reshape(bs, -1)
+
+    col = np.lib.stride_tricks.as_strided(x, (bs, oH, oW, fH, fW, C), (sBs,stride*sH, stride*sW, sH, sW, sC), writeable=False)
+    return np.reshape(col, (bs, oW*oH, fH*fW*C))
 
 
 def col2im(col: np.ndarray, oH, oW):
@@ -424,6 +427,7 @@ def conv2d(inp: np.ndarray, kernel: np.ndarray) -> np.ndarray:
     #            res[:, y, x, k] = np.apply_over_axes(np.sum, filter * sub_img, axes=[1, 2, 3]).reshape(-1)
     #return res
 
+
 class Conv2D(Function):
     def forward(self, inp: Tensor, kernel: Tensor) -> Tensor:
         self.save_tensors_for_backward(inp, kernel)
@@ -441,17 +445,13 @@ class Conv2D(Function):
         # Gradient with respect to the weights
         kernel_grad = np.zeros((bs, *kernel.shape))
         for co in range(kernel.shape[0]):
-            sd = np.expand_dims(grad_in[:, :, :, co], axis=-1).sum(axis=0, keepdims=1)
+            # This probably fucks it
+            #sd = np.expand_dims(grad_in[:, :, :, co], axis=-1).sum(axis=0, keepdims=1)
+            sd = np.expand_dims(grad_in[:, :, :, co], axis=-1)
             for ci in range(kernel.shape[3]):
                 si = np.expand_dims(inp.data[:, :, :, ci], axis=-1)
-                # Due to batch_size > 1 we somehow need to reduce the last dimension?
                 kg = conv2d(si, sd)
-                kernel_grad[:, co, :, :, ci] += kg.squeeze(axis=-1)
+                kernel_grad[:, co, :, :, ci] = kg.sum(axis=-1)
 
         return [inp_grad, kernel_grad]
     
-
-if __name__ == "__main__":
-   x = np.zeros((3,227,227,3))
-   k = np.zeros((10,11,11,3))
-   conv2d(x, k)

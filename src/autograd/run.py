@@ -45,6 +45,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=8, dest="batch_size")
     parser.add_argument("--shuffle", type=bool, default=True, dest="shuffle")
     parser.add_argument("--epochs", type=int, dest="epochs", default=100)
+    parser.add_argument("--model", type=str, choices=["cnn", "fcn"], dest="model")
 
     args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -54,8 +55,12 @@ if __name__ == "__main__":
     test_dataset = MNIST(args.test_dataset)
     test_dataloader = Dataloader(test_dataset, args.batch_size, False)
 
-    model = CNNModel()
+    if args.model == "cnn":
+        model = CNNModel()
+    else:
+        model = FCNModel()
 
+    print(f"Training {args.model.upper()} for {args.epochs} with lr={args.lr} and weight-decay={args.weight_decay}.")
     optimizer = SGD(lr=args.lr, weight_decay=args.weight_decay)
     trainer = Trainer(model, optimizer, args.epochs)
     trainer.fit(train_dataloader, [Accuracy()])

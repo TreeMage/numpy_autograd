@@ -3,8 +3,6 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import List
 
-import attr
-import numpy
 import numpy as np
 
 from autograd.layer import Linear, ReLU, Softmax, Sigmoid, Layer, Conv2D

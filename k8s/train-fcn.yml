@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fcn-train
+spec:
+  template:
+    spec:
+      priorityClassName: research-med
+      containers:
+        - name: nn-train
+          image: ls6-stud-registry.informatik.uni-wuerzburg.de/studkohlmann/prog-nn-autograd:0.0.1
+          imagePullPolicy: "Always"
+          resources:
+            limits:
+              cpu: "12"
+              memory: "8Gi"
+            requests:
+              cpu: "12"
+              memory: "8Gi"
+          args: ["--train-dataset /app/data/mnist_train.csv ",
+                 "--test-dataset /app/data/mnist_test.csv ",
+                 "--output-dir /out/fcn/",
+                 "--epochs 20 ",
+                 "--weight-decay 0.01",
+                 "--batch-size 4",
+                 "--lr 0.004",
+                 "--shuffle True",
+                 "--model fcn"]
+          volumeMounts:
+            - mountPath: /out
+              name: out
+      imagePullSecrets:
+        - name: lsx-registry
+      restartPolicy: "Never"
+      volumes:
+        - name: out
+          cephfs:
+            monitors:
+              - 132.187.14.16,132.187.14.17,132.187.14.19,132.187.14.20  # Not important for you, just copy along
+            user: studkohlmann  # <namespace>
+            path: "/home/stud/kohlmann/prog_nn" # The path you want to mount
+            secretRef: # The name of the secret for auth. Is always "ceph-secret"
+              name: ceph-secret
