@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import List, Dict
 
 import tqdm
@@ -26,32 +27,46 @@ class Trainer:
 
     MOVING_AVG_WINDOW_SIZE = 100
 
-    def __init__(self, model: Model, optimizer: Optimizer, num_epochs: int):
+    def __init__(self, model: Model, optimizer: Optimizer = None, num_epochs: int = 10):
         self.model = model
         self.optimizer = optimizer
         self.num_epochs = num_epochs
 
-    def fit(self, train_dataloader: Dataloader, metrics: List[Metric] = None):
+    def _run_train_epoch(self, train_dataloader: Dataloader, epoch: int, metrics: List[Metric] = None):
         avg = RunningAverage(self.MOVING_AVG_WINDOW_SIZE)
+        [metric.reset() for metric in metrics]
+        train_dataloader.reshuffle()
+        pbar = tqdm.trange(len(train_dataloader))
+        for batch_idx in pbar:
+            self.optimizer.zero_grad()
+            x, labels = train_dataloader[batch_idx]
+            y = self.model(x)
+            loss = self.model.compute_loss(y, labels)
+
+            [metric.forward(y, labels) for metric in metrics]
+
+            avg.append(loss.data.item())
+            desc = f"Epoch: {epoch} Loss: {avg.compute():.3f} "
+            metric_desc = ' '.join([f"{metric.name()}: {metric.compute():.3f}" for metric in metrics])
+            pbar.set_description(desc + metric_desc)
+            loss.backward()
+            self.optimizer.step()
+
+    def fit(self, train_dataloader: Dataloader, test_dataloader: Dataloader,
+            metrics: List[Metric] = None,
+            run_test_every_n_epochs: int = 1) -> Dict[str, List[float]]:
+        if self.optimizer is None:
+            raise ValueError("An optimizer has to be provided for fitting the model.")
         self.optimizer.bind(self.model.parameters())
+        test_results = defaultdict(list)
         for epoch in range(self.num_epochs):
-            [metric.reset() for metric in metrics]
-            train_dataloader.reshuffle()
-            pbar = tqdm.trange(len(train_dataloader))
-            for batch_idx in pbar:
-                self.optimizer.zero_grad()
-                x, labels = train_dataloader[batch_idx]
-                y = self.model(x)
-                loss = self.model.compute_loss(y, labels)
+            self._run_train_epoch(train_dataloader, epoch, metrics)
+            if (epoch + 1) % run_test_every_n_epochs == 0:
+                epoch_result = self.test(test_dataloader, metrics)
+                for metric, value in epoch_result.items():
+                    test_results[metric].append(value)
 
-                [metric.forward(y, labels) for metric in metrics]
-
-                avg.append(loss.data.item())
-                desc = f"Epoch: {epoch} Loss: {avg.compute():.3f} "
-                metric_desc = ' '.join([f"{metric.name()}: {metric.compute():.3f}" for metric in metrics])
-                pbar.set_description(desc + metric_desc)
-                loss.backward()
-                self.optimizer.step()
+        return test_results
 
     def test(self, test_dataloader: Dataloader, metrics: List[Metric] = None) -> Dict[str, float]:
         avg = RunningAverage(len(test_dataloader))

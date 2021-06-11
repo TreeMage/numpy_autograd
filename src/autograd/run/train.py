@@ -9,29 +9,7 @@ from autograd.datasets.mnist import MNIST
 from autograd.metric import Accuracy
 from autograd.model import FCNModel, CNNModel
 from autograd.optim import SGD
-from autograd.tensor import Tensor
-from autograd.layer import Linear
 from autograd.trainer import Trainer
-
-
-def fcn_example():
-    x = Tensor(np.array([[0.4183, 0.5209, 0.0291]]), requires_grad=False)
-    label = Tensor(np.array([[0.7095, 0.0942]]),requires_grad=False)
-    W1 = Tensor(np.array([[-0.5058, 0.3987, -0.8943],
-                          [0.3356, 0.1673, 0.8321],
-                          [-0.3485, -0.4597, -0.1121]]))
-    b1 = Tensor(np.array([[0.,0.,0.]]))
-    W2 = Tensor(np.array([[0.4047, 0.9563],
-                          [-0.8192, -0.1274],
-                          [0.3662, -0.7252]]))
-    b2 = Tensor(np.array([[0., 0.]]))
-    y1 = (x @ W1) + b1
-    sig1 = Tensor.sigmoid(y1)
-    y2 = (sig1 @ W2) + b2
-    sm = Tensor.softmax(y2, axis=-1)
-    loss = Tensor.cross_entropy(sm, label)
-    loss.backward()
-    print(W1.grad)
 
 
 if __name__ == "__main__":
@@ -46,6 +24,7 @@ if __name__ == "__main__":
     parser.add_argument("--shuffle", type=bool, default=True, dest="shuffle")
     parser.add_argument("--epochs", type=int, dest="epochs", default=100)
     parser.add_argument("--model", type=str, choices=["cnn", "fcn"], dest="model")
+    parser.add_argument("--test-frequency", type=int, dest="run_test_every_n_epochs", default=1)
 
     args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -60,11 +39,12 @@ if __name__ == "__main__":
     else:
         model = FCNModel()
 
-    print(f"Training {args.model.upper()} for {args.epochs} with lr={args.lr} and weight-decay={args.weight_decay}.")
+    print(f"Training {args.model.upper()} for {args.epochs} epochs with lr={args.lr} and weight-decay={args.weight_decay}.")
     optimizer = SGD(lr=args.lr, weight_decay=args.weight_decay)
     trainer = Trainer(model, optimizer, args.epochs)
-    trainer.fit(train_dataloader, [Accuracy()])
-    test_results = trainer.test(test_dataloader, [Accuracy()])
+    test_results = trainer.fit(train_dataloader, test_dataloader,
+                               metrics=[Accuracy()],
+                               run_test_every_n_epochs=args.run_test_every_n_epochs)
     with open(args.output_dir / "results.json", "w") as f:
         json.dump(test_results, f)
 

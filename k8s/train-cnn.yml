@@ -13,19 +13,20 @@ spec:
           resources:
             limits:
               cpu: "12"
-              memory: "4Gi"
+              memory: "8Gi"
             requests:
               cpu: "12"
-              memory: "4Gi"
+              memory: "8Gi"
           args: ["--train-dataset /app/data/mnist_train.csv",
                  "--test-dataset /app/data/mnist_test.csv",
                  "--output-dir /out/cnn/",
                  "--epochs 20",
-                 "--weight-decay 0.01",
+                 "--weight-decay 0.005",
                  "--batch-size 4",
                  "--lr 0.004",
                  "--shuffle True",
-                 "--model cnn"]
+                 "--model cnn",
+                 "--test-frequency 2"]
           volumeMounts:
             - mountPath: /out
               name: out

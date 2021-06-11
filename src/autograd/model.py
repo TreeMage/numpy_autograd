@@ -25,7 +25,7 @@ class Model:
         np.savez(path, **save_dict)
 
     def load(self, path: Path):
-        save_dict = np.load(str(path) + ".npz")
+        save_dict = np.load(str(path))
         for i, param in enumerate(self.parameters()):
             param.data = save_dict[str(i)]
 
@@ -43,16 +43,16 @@ class Model:
 
 class FCNModel(Model):
     def __init__(self):
-        self.lin1 = Linear((28*28, 128))
-        self.lin2 = Linear((128, 10))
-        self.sig = Sigmoid()
+        self.lin1 = Linear((28*28, 256))
+        self.lin2 = Linear((256, 10))
+        self.relu = ReLU()
         self.softmax = Softmax()
 
     def forward(self, x: Tensor) -> Tensor:
         batch_size = x.shape[0]
         x = Tensor.reshape(x, (batch_size, 1, -1))
         y1 = self.lin1(x)
-        r1 = self.sig(y1)
+        r1 = self.relu(y1)
         y2 = self.lin2(r1)
         sm = self.softmax(y2)
         return sm

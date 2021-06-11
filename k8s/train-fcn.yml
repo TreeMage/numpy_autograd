@@ -20,12 +20,13 @@ spec:
           args: ["--train-dataset /app/data/mnist_train.csv ",
                  "--test-dataset /app/data/mnist_test.csv ",
                  "--output-dir /out/fcn/",
-                 "--epochs 20 ",
+                 "--epochs 30",
                  "--weight-decay 0.01",
                  "--batch-size 4",
                  "--lr 0.004",
                  "--shuffle True",
-                 "--model fcn"]
+                 "--model fcn",
+                 "--test-frequency 2"]
           volumeMounts:
             - mountPath: /out
               name: out
@@ -38,6 +39,6 @@ spec:
             monitors:
               - 132.187.14.16,132.187.14.17,132.187.14.19,132.187.14.20  # Not important for you, just copy along
             user: studkohlmann  # <namespace>
-            path: "/home/stud/kohlmann/prog_nn" # The path you want to mount
+            path: "/home/stud/kohlmann/prog_nn/autograd" # The path you want to mount
             secretRef: # The name of the secret for auth. Is always "ceph-secret"
               name: ceph-secret
