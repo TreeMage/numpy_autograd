@@ -22,7 +22,8 @@ class Model:
     def save(self, path: Path):
         parms = self.parameters()
         save_dict = {str(i): parms[i].data for i in range(len(parms))}
-        np.savez(path, **save_dict)
+        with open(path, "wb") as f:
+            np.savez(f, **save_dict)
 
     def load(self, path: Path):
         save_dict = np.load(str(path))

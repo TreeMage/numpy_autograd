@@ -9,8 +9,7 @@ from autograd.datasets.mnist import MNIST
 from autograd.metric import Accuracy
 from autograd.model import FCNModel, CNNModel
 from autograd.optim import SGD
-from autograd.trainer import Trainer
-
+from autograd.trainer import Trainer, CheckpointCallback
 
 if __name__ == "__main__":
 
@@ -39,14 +38,17 @@ if __name__ == "__main__":
     else:
         model = FCNModel()
 
+    checkpoint = CheckpointCallback(args.output_dir, "Accuracy", k=2)
+
     print(f"Training {args.model.upper()} for {args.epochs} epochs with lr={args.lr} and weight-decay={args.weight_decay}.")
     optimizer = SGD(lr=args.lr, weight_decay=args.weight_decay)
     trainer = Trainer(model, optimizer, args.epochs)
     test_results = trainer.fit(train_dataloader, test_dataloader,
                                metrics=[Accuracy()],
+                               callbacks=[checkpoint],
                                run_test_every_n_epochs=args.run_test_every_n_epochs)
     with open(args.output_dir / "results.json", "w") as f:
         json.dump(test_results, f)
 
-    model.save(args.output_dir / "model")
+    model.save(args.output_dir / "model.nn")
 

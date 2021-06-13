@@ -12,21 +12,21 @@ spec:
           imagePullPolicy: "Always"
           resources:
             limits:
-              cpu: "12"
+              cpu: "16"
               memory: "8Gi"
             requests:
-              cpu: "12"
+              cpu: "16"
               memory: "8Gi"
           args: ["--train-dataset /app/data/mnist_train.csv",
                  "--test-dataset /app/data/mnist_test.csv",
                  "--output-dir /out/cnn/",
-                 "--epochs 20",
-                 "--weight-decay 0.005",
+                 "--epochs 40",
+                 "--weight-decay 0.006",
                  "--batch-size 4",
                  "--lr 0.004",
                  "--shuffle True",
                  "--model cnn",
-                 "--test-frequency 2"]
+                 "--test-frequency 5"]
           volumeMounts:
             - mountPath: /out
               name: out
