@@ -315,7 +315,7 @@ class Sigmoid(Function):
 
 
 class Sum(Function):
-    def forward(self, x: Tensor, axis: int = None, keepdims = False):
+    def forward(self, x: Tensor, axis: int = None, keepdims=False):
         self.save_tensors_for_backward(x)
         self.save_metadata_for_backward(axis, x.shape, keepdims)
         return Tensor(np.sum(x.data, axis=axis, keepdims=keepdims), grad_fn=self)
@@ -386,13 +386,8 @@ def im2col(x: np.ndarray, kernel_shape: Tuple[int, ...], stride=1):
     sBs, sH, sW, sC = x.strides
     oH = (H - fH) // stride + 1
     oW = (W - fW) // stride + 1
-    #col = np.zeros((bs, oH*oW, fH*fW * C))
-    #for i in range(oH):
-    #    for j in range(oW):
-    #        cube = x[:, i*stride:i*stride+fH,j*stride:j*stride+fW, :]
-    #        col[:, i * oH + j, :] = cube.reshape(bs, -1)
 
-    col = np.lib.stride_tricks.as_strided(x, (bs, oH, oW, fH, fW, C), (sBs,stride*sH, stride*sW, sH, sW, sC), writeable=False)
+    col = np.lib.stride_tricks.as_strided(x, (bs, oH, oW, fH, fW, C), (sBs, stride*sH, stride*sW, sH, sW, sC), writeable=False)
     return np.reshape(col, (bs, oW*oH, fH*fW*C))
 
 
@@ -410,22 +405,6 @@ def conv2d(inp: np.ndarray, kernel: np.ndarray) -> np.ndarray:
     reshaped_kernel = kernel.reshape(nf, -1)
     mul = np.dot(col, reshaped_kernel.T)
     return col2im(mul, oH, oW)
-    #if len(inp.shape) == 3:
-    #    # Implicit batch dim
-    #    inp = np.expand_dims(inp, axis=0)
-    #b, iH, iW, iC = inp.shape
-    #nf, fH, fW, fC = kernel.shape
-    #h = iH - fH + 1
-    #w = iW - fW + 1
-    #res = np.zeros((inp.shape[0], h, w, nf))
-    #assert iC == fC, f"Input channels and kernel channels have to match. ({iC} != {fC})"
-    #for y in range(h):
-    #    for x in range(w):
-    #        sub_img = inp[:, y:y + fH, x:x + fW, :]
-    #        for k in range(nf):
-    #            filter = np.repeat(np.expand_dims(kernel[k], axis=0), axis=0, repeats=b)
-    #            res[:, y, x, k] = np.apply_over_axes(np.sum, filter * sub_img, axes=[1, 2, 3]).reshape(-1)
-    #return res
 
 
 class Conv2D(Function):
@@ -445,8 +424,6 @@ class Conv2D(Function):
         # Gradient with respect to the weights
         kernel_grad = np.zeros((bs, *kernel.shape))
         for co in range(kernel.shape[0]):
-            # This probably fucks it
-            #sd = np.expand_dims(grad_in[:, :, :, co], axis=-1).sum(axis=0, keepdims=1)
             sd = np.expand_dims(grad_in[:, :, :, co], axis=-1)
             for ci in range(kernel.shape[3]):
                 si = np.expand_dims(inp.data[:, :, :, ci], axis=-1)
@@ -454,4 +431,3 @@ class Conv2D(Function):
                 kernel_grad[:, co, :, :, ci] = kg.sum(axis=-1)
 
         return [inp_grad, kernel_grad]
-    
